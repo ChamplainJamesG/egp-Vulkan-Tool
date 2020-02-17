@@ -1,4 +1,23 @@
 #include "VkRenderer.h"
+// https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Validation_layers
+// Need to make our own creation function, because validation layers are not automatically loaded 
+VkResult createDebugUtilsMessengerExt(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+	const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
+{
+	auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+	if (func != nullptr)
+		return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+	else
+		return VK_ERROR_EXTENSION_NOT_PRESENT;
+}
+
+// also need to make our own destruction function.
+void destroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
+{
+	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+	if (func != nullptr)
+		func(instance, debugMessenger, pAllocator);
+}
 
 void VulkanRenderer::run()
 {
@@ -21,8 +40,11 @@ void VulkanRenderer::initGLFWWindow()
 void VulkanRenderer::initVulkan()
 {
 	createVkInstance();
+	createDebugMessenger();
 }
 
+// instance
+// create a single VkInstance
 void VulkanRenderer::createVkInstance()
 {
 	if (enableValidationLayers && !checkValidationLayerSupport())
@@ -60,16 +82,48 @@ void VulkanRenderer::createVkInstance()
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(func_exts.size());
 	createInfo.ppEnabledExtensionNames = func_exts.data();
 
+	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
+
 	if (enableValidationLayers)
 	{
 		createInfo.enabledLayerCount = static_cast<uint32_t>(VALIDATION_LAYERS.size());
 		createInfo.ppEnabledLayerNames = VALIDATION_LAYERS.data();
+
+		populateDebugMessenger(debugCreateInfo);
+		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)& debugCreateInfo;
 	}
 	else
+	{
 		createInfo.enabledLayerCount = 0;
+		createInfo.pNext = nullptr;
+	}
 
 	if (vkCreateInstance(&createInfo, nullptr, &mVkInstance) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create instance. Very stinky.");
+}
+
+void VulkanRenderer::populateDebugMessenger(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
+{
+	createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+	createInfo.pfnUserCallback = debugCallback; // pointer to callback function
+	createInfo.pUserData = nullptr;
+}
+
+// validation layers
+// create debug messenger that can display errors for validation layers.
+void VulkanRenderer::createDebugMessenger()
+{
+	if (!enableValidationLayers)
+		return;
+
+	VkDebugUtilsMessengerCreateInfoEXT createInfo;
+	populateDebugMessenger(createInfo);
+
+	if (createDebugUtilsMessengerExt(mVkInstance, &createInfo, nullptr, &mDebugMessenger) != VK_SUCCESS)
+		throw std::runtime_error("Failed to create the debug messenger.");
 }
 
 void VulkanRenderer::runRenderer()
@@ -124,7 +178,8 @@ std::vector<const char*> VulkanRenderer::getRequiredExtensions()
 
 void VulkanRenderer::cleanRenderer()
 {
-
+	if (enableValidationLayers)
+		destroyDebugUtilsMessengerEXT(mVkInstance, mDebugMessenger, nullptr);
 	vkDestroyInstance(mVkInstance, nullptr);
 	glfwDestroyWindow(mWindow);
 	glfwTerminate();
