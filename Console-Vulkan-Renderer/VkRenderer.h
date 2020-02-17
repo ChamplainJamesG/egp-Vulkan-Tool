@@ -37,6 +37,8 @@ private:
 	void createVkInstance(); // Create a vulkan instance
 	void populateDebugMessenger(VkDebugUtilsMessengerCreateInfoEXT &createInfo); // we can populate the messenger, and then that lets us do calls for instance creation and destruction.
 	void createDebugMessenger();
+	void findPhysicalDevice(); // find a suitable graphics card to run on.
+	bool isDeviceSuitable(VkPhysicalDevice dev); // check whether a GPU is suitable or not for Vk.
 	void runRenderer(); // The main loop - draw basically.
 	void cleanRenderer(); // Cleanup everything on destroy.
 
@@ -48,6 +50,7 @@ private:
 
 	VkInstance mVkInstance; // Instance that allows us to interface w/ vulkan.
 	VkDebugUtilsMessengerEXT mDebugMessenger; // allows for debug callback with validation layers. 
+	VkPhysicalDevice mPhysicalDevice; // the graphcis card to interface with.
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.

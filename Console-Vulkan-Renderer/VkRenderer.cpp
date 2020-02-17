@@ -41,6 +41,7 @@ void VulkanRenderer::initVulkan()
 {
 	createVkInstance();
 	createDebugMessenger();
+	findPhysicalDevice();
 }
 
 // instance
@@ -124,6 +125,36 @@ void VulkanRenderer::createDebugMessenger()
 
 	if (createDebugUtilsMessengerExt(mVkInstance, &createInfo, nullptr, &mDebugMessenger) != VK_SUCCESS)
 		throw std::runtime_error("Failed to create the debug messenger.");
+}
+
+void VulkanRenderer::findPhysicalDevice()
+{
+	uint32_t deviceCt = 0;
+	vkEnumeratePhysicalDevices(mVkInstance, &deviceCt, nullptr);
+
+	if (deviceCt == 0)
+		throw std::runtime_error("No GPU on the device with Vulkan support. Panic!");
+
+	// fill the vector with data now based on the devices we found that were suitable.
+	std::vector<VkPhysicalDevice> devices(deviceCt);
+	vkEnumeratePhysicalDevices(mVkInstance, &deviceCt, devices.data());
+
+	for (const auto& device : devices)
+	{
+		if (isDeviceSuitable(device))
+		{
+			mPhysicalDevice = device;
+			break;
+		}
+	}
+
+	if (mPhysicalDevice == VK_NULL_HANDLE)
+		throw std::runtime_error("failed to find a GPU. Panic!");
+}
+
+bool VulkanRenderer::isDeviceSuitable(VkPhysicalDevice device)
+{
+	return true;
 }
 
 void VulkanRenderer::runRenderer()
