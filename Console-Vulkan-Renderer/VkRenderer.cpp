@@ -42,6 +42,7 @@ void VulkanRenderer::initVulkan()
 	createVkInstance();
 	createDebugMessenger();
 	findPhysicalDevice();
+	createLogicalDevice();
 }
 
 // instance
@@ -152,9 +153,86 @@ void VulkanRenderer::findPhysicalDevice()
 		throw std::runtime_error("failed to find a GPU. Panic!");
 }
 
+// later on down the line, I could create something that finds a better GPU based on "score"
 bool VulkanRenderer::isDeviceSuitable(VkPhysicalDevice device)
 {
-	return true;
+	//VkPhysicalDeviceProperties deviceProperties;
+	//VkPhysicalDeviceFeatures deviceFeatures;
+	//vkGetPhysicalDeviceProperties(device, &deviceProperties);
+	//vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+	//return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader;
+
+	QueueFamilyIndices ind = findQueueFamilies(device);
+	return ind.isSomething();
+}
+
+QueueFamilyIndices VulkanRenderer::findQueueFamilies(VkPhysicalDevice device)
+{
+	QueueFamilyIndices indices;
+
+	uint32_t queueFamilyCt;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCt, nullptr);
+
+	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCt);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCt, queueFamilies.data());
+
+	// now iterate through Vk's queue family properties structure we just made to find things we need.
+	// specifically, looking for queue families that support the graphics bit flag, but could be anything.
+
+	int i = 0;
+	for (const auto& queueFamily : queueFamilies)
+	{
+		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			indices.graphicsFamily = i;
+
+		if (indices.isSomething())
+			break;
+
+		++i;
+	}
+
+	return indices;
+}
+
+void VulkanRenderer::createLogicalDevice()
+{
+	// need to make queue info for the logical device, since it also has a lot of queues.
+	QueueFamilyIndices indices = findQueueFamilies(mPhysicalDevice);
+
+	VkDeviceQueueCreateInfo queueCreateInfo = {};
+	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+
+	// can have 0 - 1 priority values of how queues should be submitted to the command buffer.
+	float queuePriority = 1.0f;
+	queueCreateInfo.pQueuePriorities = &queuePriority;
+
+	// Get the features from the physical device to use from the logical device
+	VkPhysicalDeviceFeatures deviceFeatures = {};
+	VkDeviceCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+	createInfo.pQueueCreateInfos = &queueCreateInfo;
+	createInfo.queueCreateInfoCount = 1;
+
+	createInfo.pEnabledFeatures = &deviceFeatures;
+
+	createInfo.enabledExtensionCount = 0;
+
+	if (enableValidationLayers)
+	{
+		createInfo.enabledLayerCount = static_cast<uint32_t>(VALIDATION_LAYERS.size());
+		createInfo.ppEnabledLayerNames = VALIDATION_LAYERS.data();
+	}
+	else
+		createInfo.enabledLayerCount = 0;
+
+	if (vkCreateDevice(mPhysicalDevice, &createInfo, nullptr, &mLogicalDevice) != VK_SUCCESS)
+		throw std::runtime_error("failed to create logical device. That's rough buddy.");
+
+	// get the queue now that everyone is set up.
+	vkGetDeviceQueue(mLogicalDevice, indices.graphicsFamily.value(), 0, &mGraphicsQueue);
 }
 
 void VulkanRenderer::runRenderer()
@@ -209,6 +287,7 @@ std::vector<const char*> VulkanRenderer::getRequiredExtensions()
 
 void VulkanRenderer::cleanRenderer()
 {
+	vkDestroyDevice(mLogicalDevice, nullptr);
 	if (enableValidationLayers)
 		destroyDebugUtilsMessengerEXT(mVkInstance, mDebugMessenger, nullptr);
 	vkDestroyInstance(mVkInstance, nullptr);

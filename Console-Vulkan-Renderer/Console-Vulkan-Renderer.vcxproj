@@ -91,6 +91,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\VulkanSDK\1.1.130.0\Include;C:\Users\james.griffiths01\Desktop\ConsoleProg\Console-Vulkan-Renderer\Libraries\glm;C:\Users\james.griffiths01\Desktop\ConsoleProg\Console-Vulkan-Renderer\Libraries\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
