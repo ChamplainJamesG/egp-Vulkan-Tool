@@ -30,6 +30,7 @@ const bool enableValidationLayers = true;
 struct QueueFamilyIndices
 {
 	std::optional<uint32_t> graphicsFamily;
+	std::optional<uint32_t> presentFamily; // queue family for presentation, letting us present stuff on the surface.
 
 	bool isSomething()
 	{
@@ -54,6 +55,7 @@ private:
 	bool isDeviceSuitable(VkPhysicalDevice dev); // check whether a GPU is suitable or not for Vk.
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device); // We need to submit different queues to command buffers.
 	void createLogicalDevice();
+	void createSurface();
 	void runRenderer(); // The main loop - draw basically.
 	void cleanRenderer(); // Cleanup everything on destroy.
 
@@ -68,6 +70,7 @@ private:
 	VkPhysicalDevice mPhysicalDevice; // the graphcis card to interface with.
 	VkDevice mLogicalDevice; // the logical device that lets us interface with the physical device.
 	VkQueue mGraphicsQueue; // the graphics queue for graphics things to submit to the command buffer.
+	VkSurfaceKHR mSurface; // Windows surface to draw to. Linux needs another one. Mac probably needs moltenVk.
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.

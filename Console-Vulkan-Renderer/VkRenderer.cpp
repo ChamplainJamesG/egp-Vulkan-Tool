@@ -23,6 +23,7 @@ void VulkanRenderer::run()
 {
 	initGLFWWindow();
 	initVulkan();
+	
 	runRenderer();
 	cleanRenderer();
 }
@@ -41,6 +42,7 @@ void VulkanRenderer::initVulkan()
 {
 	createVkInstance();
 	createDebugMessenger();
+	createSurface();
 	findPhysicalDevice();
 	createLogicalDevice();
 }
@@ -235,6 +237,13 @@ void VulkanRenderer::createLogicalDevice()
 	vkGetDeviceQueue(mLogicalDevice, indices.graphicsFamily.value(), 0, &mGraphicsQueue);
 }
 
+void VulkanRenderer::createSurface()
+{
+	// we can let GLFW handle all the hard stuff for creating a surface, which is nice.
+	if (glfwCreateWindowSurface(mVkInstance, mWindow, nullptr, &mSurface) != VK_SUCCESS)
+		throw std::runtime_error("Couldn't create the window surface. Everything is broken.");
+}
+
 void VulkanRenderer::runRenderer()
 {
 	while (!glfwWindowShouldClose(mWindow))
@@ -290,6 +299,7 @@ void VulkanRenderer::cleanRenderer()
 	vkDestroyDevice(mLogicalDevice, nullptr);
 	if (enableValidationLayers)
 		destroyDebugUtilsMessengerEXT(mVkInstance, mDebugMessenger, nullptr);
+	vkDestroySurfaceKHR(mVkInstance, mSurface, nullptr);
 	vkDestroyInstance(mVkInstance, nullptr);
 	glfwDestroyWindow(mWindow);
 	glfwTerminate();
