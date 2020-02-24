@@ -15,8 +15,14 @@
 
 const int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 
-const std::vector<const char*> VALIDATION_LAYERS = {
+const std::vector<const char*> VALIDATION_LAYERS = 
+{
 	"VK_LAYER_KHRONOS_validation"
+};
+
+const std::vector<const char*> DEVICE_EXTENSIONS =
+{
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
 #ifdef NDEBUG
@@ -36,6 +42,20 @@ struct QueueFamilyIndices
 	{
 		return graphicsFamily.has_value();
 	}
+
+	// used to check if we can present to the surface, and can just do graphics stuff.
+	bool isComplete()
+	{
+		return graphicsFamily.has_value() && presentFamily.has_value();
+	}
+};
+
+// store data for swap chain properties & stuff
+struct SwapChainSupportDetails
+{
+	VkSurfaceCapabilitiesKHR capabilities; // basic surface capabilities (min/max number of images in swapchain, min/max width / height.
+	std::vector<VkSurfaceFormatKHR> formats; // things like pixel format, color space.
+	std::vector<VkPresentModeKHR> presentModes; // available presentation modes.
 };
 
 
@@ -53,9 +73,11 @@ private:
 	void createDebugMessenger();
 	void findPhysicalDevice(); // find a suitable graphics card to run on
 	bool isDeviceSuitable(VkPhysicalDevice dev); // check whether a GPU is suitable or not for Vk.
+	bool checkDeviceExtensionSupport(VkPhysicalDevice device); // do an additional check for device extensions (i.e, can it present)
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device); // We need to submit different queues to command buffers.
 	void createLogicalDevice();
 	void createSurface();
+	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 	void runRenderer(); // The main loop - draw basically.
 	void cleanRenderer(); // Cleanup everything on destroy.
 
@@ -71,6 +93,7 @@ private:
 	VkDevice mLogicalDevice; // the logical device that lets us interface with the physical device.
 	VkQueue mGraphicsQueue; // the graphics queue for graphics things to submit to the command buffer.
 	VkSurfaceKHR mSurface; // Windows surface to draw to. Linux needs another one. Mac probably needs moltenVk.
+	VkQueue mPresentQueue; // queue for commands for presenting to the surface.
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.

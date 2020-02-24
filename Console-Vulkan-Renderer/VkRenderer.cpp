@@ -1,4 +1,5 @@
 #include "VkRenderer.h"
+#include <set> // so that we can create sets of queueFamilyIndices.
 // https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Validation_layers
 // Need to make our own creation function, because validation layers are not automatically loaded 
 VkResult createDebugUtilsMessengerExt(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
@@ -166,7 +167,35 @@ bool VulkanRenderer::isDeviceSuitable(VkPhysicalDevice device)
 	//return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader;
 
 	QueueFamilyIndices ind = findQueueFamilies(device);
-	return ind.isSomething();
+
+	bool extSupported = checkDeviceExtensionSupport(device);
+
+	bool goodSwapChain = false;
+	if (extSupported)
+	{
+		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+		goodSwapChain = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+	}
+
+	return ind.isSomething() && extSupported && goodSwapChain;
+}
+
+bool VulkanRenderer::checkDeviceExtensionSupport(VkPhysicalDevice device)
+{
+	// We've seen this process a bunch before. Get the count of stuff, then get the stuff.
+	uint32_t extensionCount;
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+	std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+	vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+	// go through all the required extensions, and make sure we get them all. 
+	std::set<std::string> requiredExtensions(DEVICE_EXTENSIONS.begin(), DEVICE_EXTENSIONS.end());
+
+	for (const auto& extension : availableExtensions)
+		requiredExtensions.erase(extension.extensionName);
+
+	return requiredExtensions.empty();
 }
 
 QueueFamilyIndices VulkanRenderer::findQueueFamilies(VkPhysicalDevice device)
@@ -188,7 +217,14 @@ QueueFamilyIndices VulkanRenderer::findQueueFamilies(VkPhysicalDevice device)
 		if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 			indices.graphicsFamily = i;
 
-		if (indices.isSomething())
+		// check if this device also supports presentation
+		VkBool32 presentSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, mSurface, &presentSupport);
+
+		if (presentSupport)
+			indices.presentFamily = i;
+
+		if (indices.isComplete())
 			break;
 
 		++i;
@@ -202,26 +238,41 @@ void VulkanRenderer::createLogicalDevice()
 	// need to make queue info for the logical device, since it also has a lot of queues.
 	QueueFamilyIndices indices = findQueueFamilies(mPhysicalDevice);
 
-	VkDeviceQueueCreateInfo queueCreateInfo = {};
-	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
-	queueCreateInfo.queueCount = 1;
+	//VkDeviceQueueCreateInfo queueCreateInfo = {};
+	//queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+	//queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+	//queueCreateInfo.queueCount = 1;
 
-	// can have 0 - 1 priority values of how queues should be submitted to the command buffer.
+	//// can have 0 - 1 priority values of how queues should be submitted to the command buffer.
+	//float queuePriority = 1.0f;
+	//queueCreateInfo.pQueuePriorities = &queuePriority;
+
+	// with multiple queues, we'll make a set of them.
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 	float queuePriority = 1.0f;
-	queueCreateInfo.pQueuePriorities = &queuePriority;
+	for (uint32_t queueFamily : uniqueQueueFamilies)
+	{
+		VkDeviceQueueCreateInfo queueCreateInfo = {};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
 
 	// Get the features from the physical device to use from the logical device
 	VkPhysicalDeviceFeatures deviceFeatures = {};
 	VkDeviceCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-	createInfo.pQueueCreateInfos = &queueCreateInfo;
-	createInfo.queueCreateInfoCount = 1;
+	createInfo.pQueueCreateInfos = queueCreateInfos.data();
+	createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 
 	createInfo.pEnabledFeatures = &deviceFeatures;
 
-	createInfo.enabledExtensionCount = 0;
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(DEVICE_EXTENSIONS.size());
+	createInfo.ppEnabledExtensionNames = DEVICE_EXTENSIONS.data();
 
 	if (enableValidationLayers)
 	{
@@ -236,6 +287,7 @@ void VulkanRenderer::createLogicalDevice()
 
 	// get the queue now that everyone is set up.
 	vkGetDeviceQueue(mLogicalDevice, indices.graphicsFamily.value(), 0, &mGraphicsQueue);
+	vkGetDeviceQueue(mLogicalDevice, indices.presentFamily.value(), 0, &mPresentQueue);
 }
 
 void VulkanRenderer::createSurface()
@@ -243,6 +295,33 @@ void VulkanRenderer::createSurface()
 	// we can let GLFW handle all the hard stuff for creating a surface, which is nice.
 	if (glfwCreateWindowSurface(mVkInstance, mWindow, nullptr, &mSurface) != VK_SUCCESS)
 		throw std::runtime_error("Couldn't create the window surface. Everything is broken.");
+}
+
+SwapChainSupportDetails VulkanRenderer::querySwapChainSupport(VkPhysicalDevice device)
+{
+	SwapChainSupportDetails details;
+
+	// get the swap chain support capabilities.
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, mSurface, &details.capabilities);
+
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(device, mSurface, &formatCount, nullptr);
+
+	if (formatCount != 0)
+	{
+		details.formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, mSurface, &formatCount, details.formats.data());
+	}
+
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(device, mSurface, &presentModeCount, nullptr);
+
+	if (presentModeCount != 0)
+	{
+		details.presentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, mSurface, &presentModeCount, details.presentModes.data());
+	}
+	return details;
 }
 
 void VulkanRenderer::runRenderer()
