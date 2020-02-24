@@ -205,6 +205,7 @@ void VulkanRenderer::createLogicalDevice()
 	VkDeviceQueueCreateInfo queueCreateInfo = {};
 	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 	queueCreateInfo.queueFamilyIndex = indices.graphicsFamily.value();
+	queueCreateInfo.queueCount = 1;
 
 	// can have 0 - 1 priority values of how queues should be submitted to the command buffer.
 	float queuePriority = 1.0f;
