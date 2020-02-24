@@ -324,6 +324,14 @@ SwapChainSupportDetails VulkanRenderer::querySwapChainSupport(VkPhysicalDevice d
 	return details;
 }
 
+VkSurfaceFormatKHR VulkanRenderer::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+{
+	for (const auto& availableFormat : availableFormats)
+	{
+
+	}
+}
+
 void VulkanRenderer::runRenderer()
 {
 	while (!glfwWindowShouldClose(mWindow))

@@ -78,6 +78,9 @@ private:
 	void createLogicalDevice();
 	void createSurface();
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+	// helper functions to set up swap chain 
+	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	// end ^^^
 	void runRenderer(); // The main loop - draw basically.
 	void cleanRenderer(); // Cleanup everything on destroy.
 
