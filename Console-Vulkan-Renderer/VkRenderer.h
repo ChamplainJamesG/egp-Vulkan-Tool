@@ -12,7 +12,8 @@
 
 #include <vector>
 #include <optional>
-
+#include <algorithm>
+#include <cstdlib>
 const int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 
 const std::vector<const char*> VALIDATION_LAYERS = 
@@ -80,6 +81,9 @@ private:
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 	// helper functions to set up swap chain 
 	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+	void createSwapChain();
 	// end ^^^
 	void runRenderer(); // The main loop - draw basically.
 	void cleanRenderer(); // Cleanup everything on destroy.
@@ -97,6 +101,10 @@ private:
 	VkQueue mGraphicsQueue; // the graphics queue for graphics things to submit to the command buffer.
 	VkSurfaceKHR mSurface; // Windows surface to draw to. Linux needs another one. Mac probably needs moltenVk.
 	VkQueue mPresentQueue; // queue for commands for presenting to the surface.
+	VkSwapchainKHR mSwapChain; // the swap chain - list of images that are ready to be rendered.
+	std::vector<VkImage> mSwapChainImages; // list of pointers / handles to get images back from the swap chain.
+	VkFormat mSwapChainImageFormat; // used to store the swap chain image format for later (i.e recreation of swapchain)
+	VkExtent2D mSwapChainExtent; // same as above.
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.

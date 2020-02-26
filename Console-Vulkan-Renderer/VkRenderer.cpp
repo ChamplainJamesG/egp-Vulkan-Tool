@@ -1,5 +1,6 @@
 #include "VkRenderer.h"
 #include <set> // so that we can create sets of queueFamilyIndices.
+#include <cstdint> // gives us access to UINT32_MAX
 // https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Validation_layers
 // Need to make our own creation function, because validation layers are not automatically loaded 
 VkResult createDebugUtilsMessengerExt(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
@@ -46,6 +47,7 @@ void VulkanRenderer::initVulkan()
 	createSurface();
 	findPhysicalDevice();
 	createLogicalDevice();
+	createSwapChain();
 }
 
 // instance
@@ -328,9 +330,104 @@ VkSurfaceFormatKHR VulkanRenderer::chooseSwapSurfaceFormat(const std::vector<VkS
 {
 	for (const auto& availableFormat : availableFormats)
 	{
+		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			return availableFormat;
+	}
 
+	return availableFormats[0];
+}
+
+VkPresentModeKHR VulkanRenderer::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+{
+	/*
+	VK_PRESENT_MODE_IMMEDIATE_KHR: Images submitted by your application are transferred to the screen right away
+	VK_PRESENT_MODE_FIFO_KHR: The swap chain is a queue where the display takes an image from the front of the queue 
+	when the display is refreshed and the program inserts rendered images at the back of the queue.
+	VK_PRESENT_MODE_FIFO_RELAXED_KHR: This mode only differs from the previous one if the application is late and the queue was
+	empty at the last vertical blank.
+	VK_PRESENT_MODE_MAILBOX_KHR: images that are already queued are simply replaced with the newer ones. Can add triple buffering.
+	*/
+	for (const auto& availablePresentMode : availablePresentModes)
+	{
+		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+			return availablePresentMode;
+	}
+
+	return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+// resolution of swap chain images. usually equal to size of window.
+VkExtent2D VulkanRenderer::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+{
+	if (capabilities.currentExtent.width != UINT32_MAX)
+		return capabilities.currentExtent;
+	else
+	{
+		VkExtent2D actualExtent = { WINDOW_WIDTH, WINDOW_HEIGHT };
+		
+		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
+		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+
+		return actualExtent;
 	}
 }
+
+// create the swap chain using everything we just did.
+void VulkanRenderer::createSwapChain()
+{
+	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(mPhysicalDevice);
+
+	VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+	VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
+	VkExtent2D extent = chooseSwapExtent(swapChainSupport.capabilities);
+
+	uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+
+	// don't exceed max image count. Could make this a clamp function.
+	if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount)
+		imageCount = swapChainSupport.capabilities.maxImageCount;
+
+	VkSwapchainCreateInfoKHR createInfo = { };
+	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	createInfo.surface = mSurface;
+
+	createInfo.minImageCount = imageCount;
+	createInfo.imageFormat = surfaceFormat.format;
+	createInfo.imageColorSpace = surfaceFormat.colorSpace;
+	createInfo.imageExtent = extent;
+	createInfo.imageArrayLayers = 1;
+	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+	QueueFamilyIndices indices = findQueueFamilies(mPhysicalDevice);
+	uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+	if (indices.graphicsFamily != indices.presentFamily)
+	{
+		createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		createInfo.queueFamilyIndexCount = 2;
+		createInfo.pQueueFamilyIndices = queueFamilyIndices;
+	}
+	else
+	{
+		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	}
+
+	createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
+	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	createInfo.presentMode = presentMode;
+	createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+	mSwapChainImageFormat = surfaceFormat.format;
+	mSwapChainExtent = extent;
+
+	if (vkCreateSwapchainKHR(mLogicalDevice, &createInfo, nullptr, &mSwapChain) != VK_SUCCESS)
+		throw std::runtime_error("No swap chain");
+
+	vkGetSwapchainImagesKHR(mLogicalDevice, mSwapChain, &imageCount, nullptr);
+	mSwapChainImages.resize(imageCount);
+	vkGetSwapchainImagesKHR(mLogicalDevice, mSwapChain, &imageCount, mSwapChainImages.data());
+}
+
 
 void VulkanRenderer::runRenderer()
 {
@@ -384,6 +481,7 @@ std::vector<const char*> VulkanRenderer::getRequiredExtensions()
 
 void VulkanRenderer::cleanRenderer()
 {
+	vkDestroySwapchainKHR(mLogicalDevice, mSwapChain, nullptr);
 	vkDestroyDevice(mLogicalDevice, nullptr);
 	if (enableValidationLayers)
 		destroyDebugUtilsMessengerEXT(mVkInstance, mDebugMessenger, nullptr);
