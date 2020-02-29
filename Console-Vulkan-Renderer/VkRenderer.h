@@ -90,6 +90,7 @@ private:
 	void createRenderPass(); // create a render pass for graphics pipeline to use.
 	void createGraphicsPipeline(); // we have to make our own graphics pipeline. 
 	VkShaderModule createShaderModule(const std::vector<char>& code); // helper to create shader modules for vulkan from the shader code.
+	void createFrameBuffers();
 	void runRenderer(); // The main loop - draw basically.
 	void cleanRenderer(); // Cleanup everything on destroy.
 
@@ -114,6 +115,7 @@ private:
 	VkPipelineLayout mPipelineLayout; // the vulkan graphics pipeline.
 	VkRenderPass mRenderPass; // render pass storage
 	VkPipeline mGraphicsPipeline; // Stores the graphics pipeline & all stages.
+	std::vector<VkFramebuffer> mSwapChainFrameBuffers;
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.
