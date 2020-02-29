@@ -87,6 +87,7 @@ private:
 	void createSwapChain();
 	void createImageViews();
 	// end ^^^
+	void createRenderPass(); // create a render pass for graphics pipeline to use.
 	void createGraphicsPipeline(); // we have to make our own graphics pipeline. 
 	VkShaderModule createShaderModule(const std::vector<char>& code); // helper to create shader modules for vulkan from the shader code.
 	void runRenderer(); // The main loop - draw basically.
@@ -110,7 +111,9 @@ private:
 	VkFormat mSwapChainImageFormat; // used to store the swap chain image format for later (i.e recreation of swapchain)
 	VkExtent2D mSwapChainExtent; // same as above.
 	std::vector<VkImageView> mSwapChainImageViews; // how we can access an image.
-	VkPipelineLayout mPipelineLayout; // the vulkan pipeline.
+	VkPipelineLayout mPipelineLayout; // the vulkan graphics pipeline.
+	VkRenderPass mRenderPass; // render pass storage
+	VkPipeline mGraphicsPipeline; // Stores the graphics pipeline & all stages.
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.
