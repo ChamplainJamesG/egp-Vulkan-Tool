@@ -14,6 +14,7 @@
 #include <optional>
 #include <algorithm>
 #include <cstdlib>
+#include <fstream>
 const int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 
 const std::vector<const char*> VALIDATION_LAYERS = 
@@ -84,7 +85,10 @@ private:
 	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	void createSwapChain();
+	void createImageViews();
 	// end ^^^
+	void createGraphicsPipeline(); // we have to make our own graphics pipeline. 
+	VkShaderModule createShaderModule(const std::vector<char>& code); // helper to create shader modules for vulkan from the shader code.
 	void runRenderer(); // The main loop - draw basically.
 	void cleanRenderer(); // Cleanup everything on destroy.
 
@@ -105,6 +109,8 @@ private:
 	std::vector<VkImage> mSwapChainImages; // list of pointers / handles to get images back from the swap chain.
 	VkFormat mSwapChainImageFormat; // used to store the swap chain image format for later (i.e recreation of swapchain)
 	VkExtent2D mSwapChainExtent; // same as above.
+	std::vector<VkImageView> mSwapChainImageViews; // how we can access an image.
+	VkPipelineLayout mPipelineLayout; // the vulkan pipeline.
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.
@@ -118,6 +124,25 @@ private:
 	{
 		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
 		return VK_FALSE;
+	}
+
+	// Helper function to read in files (mostly shaders though). 
+	static std::vector<char> readFile(const std::string& fileName)
+	{
+		std::ifstream file(fileName, std::ios::ate | std::ios::binary);
+
+		if (!file.is_open())
+			throw std::runtime_error("Failed to open a file.");
+
+		size_t fileSize = (size_t)file.tellg();
+		std::vector<char> buffer(fileSize);
+
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+
+		file.close();
+
+		return buffer;
 	}
 };
 
