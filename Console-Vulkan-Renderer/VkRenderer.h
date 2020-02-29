@@ -9,7 +9,6 @@
 #include "glm/vec4.hpp"
 #include "glm/mat4x4.hpp"
 #include <iostream>
-
 #include <vector>
 #include <optional>
 #include <algorithm>
@@ -90,7 +89,9 @@ private:
 	void createRenderPass(); // create a render pass for graphics pipeline to use.
 	void createGraphicsPipeline(); // we have to make our own graphics pipeline. 
 	VkShaderModule createShaderModule(const std::vector<char>& code); // helper to create shader modules for vulkan from the shader code.
-	void createFrameBuffers();
+	void createFrameBuffers(); // Create framebuffers
+	void createCommandPool(); // Create pool for command buffers
+	void createCommandBuffers();
 	void runRenderer(); // The main loop - draw basically.
 	void cleanRenderer(); // Cleanup everything on destroy.
 
@@ -115,7 +116,9 @@ private:
 	VkPipelineLayout mPipelineLayout; // the vulkan graphics pipeline.
 	VkRenderPass mRenderPass; // render pass storage
 	VkPipeline mGraphicsPipeline; // Stores the graphics pipeline & all stages.
-	std::vector<VkFramebuffer> mSwapChainFrameBuffers;
+	std::vector<VkFramebuffer> mSwapChainFrameBuffers; // storage of frame buffers
+	VkCommandPool mCommandPool; // pool for command buffers
+	std::vector<VkCommandBuffer> mCommandBuffers; // list of command buffers
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.
