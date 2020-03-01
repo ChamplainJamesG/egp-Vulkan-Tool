@@ -54,6 +54,7 @@ void VulkanRenderer::initVulkan()
 	createFrameBuffers();
 	createCommandPool();
 	createCommandBuffers();
+	createSyncObjects();
 }
 
 // instance
@@ -485,12 +486,22 @@ void VulkanRenderer::createRenderPass()
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
 
+	VkSubpassDependency subpassDependency = {};
+	subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	subpassDependency.dstSubpass = 0;
+	subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	subpassDependency.srcAccessMask = 0;
+	subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
 	VkRenderPassCreateInfo renderPassInfo = {};
 	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	renderPassInfo.attachmentCount = 1;
 	renderPassInfo.pAttachments = &colorAttachment;
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
+	renderPassInfo.dependencyCount = 1;
+	renderPassInfo.pDependencies = &subpassDependency;
 
 	if (vkCreateRenderPass(mLogicalDevice, &renderPassInfo, nullptr, &mRenderPass) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create render pass!");
@@ -749,15 +760,98 @@ void VulkanRenderer::createCommandBuffers()
 		// stop recording
 		vkCmdEndRenderPass(mCommandBuffers[i]);
 		if (vkEndCommandBuffer(mCommandBuffers[i]) != VK_SUCCESS) {
-			throw std::runtime_error("Unable to record commands into command buffer!");
+			throw std::runtime_error("Unable to record commands into command buffer");
 		}
 	}
+}
+
+void VulkanRenderer::createSyncObjects()
+{
+	mImageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	mRenderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+	mInFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+	mImagesInFlight.resize(MAX_FRAMES_IN_FLIGHT, VK_NULL_HANDLE);
+
+	VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+	VkFenceCreateInfo fenceCreateInfo = {};
+	fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		if (vkCreateSemaphore(mLogicalDevice, &semaphoreCreateInfo, nullptr, &mImageAvailableSemaphores[i]) != VK_SUCCESS)
+			throw std::runtime_error("Unable to create image read semaphore");
+		if (vkCreateSemaphore(mLogicalDevice, &semaphoreCreateInfo, nullptr, &mRenderFinishedSemaphores[i]) != VK_SUCCESS)
+			throw std::runtime_error("Unable to create render finishing semaphore");
+		if (vkCreateFence(mLogicalDevice, &fenceCreateInfo, nullptr, &mInFlightFences[i]) != VK_SUCCESS)
+			throw std::runtime_error("Unable to create fences");
+	}
+
 }
 
 void VulkanRenderer::runRenderer()
 {
 	while (!glfwWindowShouldClose(mWindow))
+	{
 		glfwPollEvents();
+		drawFrame();
+	}
+}
+
+void VulkanRenderer::drawFrame()
+{
+	vkWaitForFences(mLogicalDevice, 1, &mInFlightFences[mCurrentFrame], VK_TRUE, UINT64_MAX);
+	vkResetFences(mLogicalDevice, 1, &mInFlightFences[mCurrentFrame]);
+	// acquire an image from the swap chain
+	uint32_t imageIndex;
+	vkAcquireNextImageKHR(mLogicalDevice, mSwapChain, UINT64_MAX, mImageAvailableSemaphores[mCurrentFrame], VK_NULL_HANDLE, &imageIndex);
+
+	// check to see if a previous frame is using this frame we're drawing to.
+	if (mImagesInFlight[imageIndex] != VK_NULL_HANDLE)
+		vkWaitForFences(mLogicalDevice, 1, &mImagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+
+	// mark this frame in use
+	mImagesInFlight[imageIndex] = mInFlightFences[mCurrentFrame];
+	// execute command buffer w/ image
+	VkSubmitInfo commandSubmitInfo = {};
+	commandSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore waitSemaphores[] = { mImageAvailableSemaphores[mCurrentFrame] };
+	VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	commandSubmitInfo.waitSemaphoreCount = 1;
+	commandSubmitInfo.pWaitSemaphores = waitSemaphores;
+	commandSubmitInfo.pWaitDstStageMask = waitStages;
+
+	commandSubmitInfo.commandBufferCount = 1;
+	commandSubmitInfo.pCommandBuffers = &mCommandBuffers[imageIndex];
+
+	// notify these semaphores when the above has finished execution
+	VkSemaphore signalSemaphores[] = { mRenderFinishedSemaphores[mCurrentFrame] };
+	commandSubmitInfo.signalSemaphoreCount = 1;
+	commandSubmitInfo.pSignalSemaphores = signalSemaphores;
+
+	vkResetFences(mLogicalDevice, 1, &mInFlightFences[mCurrentFrame]);
+
+	if (vkQueueSubmit(mGraphicsQueue, 1, &commandSubmitInfo, mInFlightFences[mCurrentFrame]) != VK_SUCCESS)
+		throw std::runtime_error("Error submitting a draw command buffer.");	
+
+	// return image to present it
+
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+
+	VkSwapchainKHR swapChains[] = { mSwapChain };
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+	presentInfo.pResults = nullptr;
+	vkQueuePresentKHR(mPresentQueue, &presentInfo);
+
+	mCurrentFrame = (mCurrentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 bool VulkanRenderer::checkValidationLayerSupport()
@@ -806,6 +900,12 @@ std::vector<const char*> VulkanRenderer::getRequiredExtensions()
 
 void VulkanRenderer::cleanRenderer()
 {
+	for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		vkDestroySemaphore(mLogicalDevice, mRenderFinishedSemaphores[i], nullptr);
+		vkDestroySemaphore(mLogicalDevice, mImageAvailableSemaphores[i], nullptr);
+		vkDestroyFence(mLogicalDevice, mInFlightFences[i], nullptr);
+	}
 	vkDestroyCommandPool(mLogicalDevice, mCommandPool, nullptr);
 	for (auto frameBuffer : mSwapChainFrameBuffers)
 		vkDestroyFramebuffer(mLogicalDevice, frameBuffer, nullptr);

@@ -32,6 +32,8 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif // NDEBUG
 
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 // store all queue families for commands for the buffer.
 // because we have to store ints, we use optional to check whether it's a valid index
 struct QueueFamilyIndices
@@ -91,8 +93,11 @@ private:
 	VkShaderModule createShaderModule(const std::vector<char>& code); // helper to create shader modules for vulkan from the shader code.
 	void createFrameBuffers(); // Create framebuffers
 	void createCommandPool(); // Create pool for command buffers
-	void createCommandBuffers();
+	void createCommandBuffers(); // Function to create command buffers themselves.
+	void createSyncObjects();
+
 	void runRenderer(); // The main loop - draw basically.
+	void drawFrame(); // function to acquire and draw a frame.
 	void cleanRenderer(); // Cleanup everything on destroy.
 
 	bool checkValidationLayerSupport(); // check for validation layers.
@@ -119,6 +124,13 @@ private:
 	std::vector<VkFramebuffer> mSwapChainFrameBuffers; // storage of frame buffers
 	VkCommandPool mCommandPool; // pool for command buffers
 	std::vector<VkCommandBuffer> mCommandBuffers; // list of command buffers
+
+	// sync objects here
+	std::vector<VkSemaphore> mImageAvailableSemaphores; // Semaphores keep our async execution in line
+	std::vector<VkSemaphore> mRenderFinishedSemaphores;
+	std::vector<VkFence> mInFlightFences; // Ensure CPU-GPU synchro
+	std::vector<VkFence> mImagesInFlight; // Lets us know if an image is currently being drawn to
+	size_t mCurrentFrame = 0;
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.
