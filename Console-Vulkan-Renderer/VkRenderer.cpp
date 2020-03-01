@@ -770,7 +770,7 @@ void VulkanRenderer::createSyncObjects()
 	mImageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 	mRenderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
 	mInFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-	mImagesInFlight.resize(MAX_FRAMES_IN_FLIGHT, VK_NULL_HANDLE);
+	mImagesInFlight.resize(mSwapChainImages.size(), VK_NULL_HANDLE);
 
 	VkSemaphoreCreateInfo semaphoreCreateInfo = {};
 	semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -798,6 +798,8 @@ void VulkanRenderer::runRenderer()
 		glfwPollEvents();
 		drawFrame();
 	}
+
+	vkDeviceWaitIdle(mLogicalDevice);
 }
 
 void VulkanRenderer::drawFrame()
