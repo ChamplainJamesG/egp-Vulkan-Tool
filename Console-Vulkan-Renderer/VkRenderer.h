@@ -4,6 +4,7 @@
 // forces GLFW to include vulkan with its header.
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
+#include "glm/glm.hpp"
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "glm/vec4.hpp"
@@ -14,6 +15,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
+#include <array>
 const int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 
 const std::vector<const char*> VALIDATION_LAYERS = 
@@ -24,6 +26,45 @@ const std::vector<const char*> VALIDATION_LAYERS =
 const std::vector<const char*> DEVICE_EXTENSIONS =
 {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
+// structure to hold vertex data (2d rn)
+struct Vertex
+{
+	glm::vec2 mPos;
+	glm::vec3 mColor;
+
+	static VkVertexInputBindingDescription getBindingDescription()
+	{
+		VkVertexInputBindingDescription bindingDesc = {};
+		bindingDesc.binding = 0;
+		bindingDesc.stride = sizeof(Vertex);
+		bindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDesc;
+	}
+
+	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() 
+	{
+		std::array<VkVertexInputAttributeDescription, 2> attributeDescs = {};
+		attributeDescs[0].binding = 0;
+		attributeDescs[0].location = 0;
+		attributeDescs[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescs[0].offset = offsetof(Vertex, mPos);
+		attributeDescs[1].binding = 0;
+		attributeDescs[1].location = 1;
+		attributeDescs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescs[1].offset = offsetof(Vertex, mColor);
+
+		return attributeDescs;
+	}
+
+};
+
+const std::vector<Vertex> vertices = {
+	{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+	{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
 };
 
 #ifdef NDEBUG
