@@ -62,9 +62,15 @@ struct Vertex
 };
 
 const std::vector<Vertex> vertices = {
-	{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}} 
+};
+
+const std::vector<uint32_t> indices =
+{
+	0, 1, 2, 2, 3, 0
 };
 
 #ifdef NDEBUG
@@ -128,14 +134,21 @@ private:
 	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 	void createSwapChain();
 	void createImageViews();
+	void cleanupSwapChain();
+	void recreateSwapChain();
 	// end ^^^
 	void createRenderPass(); // create a render pass for graphics pipeline to use.
 	void createGraphicsPipeline(); // we have to make our own graphics pipeline. 
 	VkShaderModule createShaderModule(const std::vector<char>& code); // helper to create shader modules for vulkan from the shader code.
 	void createFrameBuffers(); // Create framebuffers
 	void createCommandPool(); // Create pool for command buffers
+	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory); // helper function to create buffers
+	void createVertexBuffer(); // Create vertex buffer
+	void createIndexBuffer();
+	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size); // copy a buffer into another one.
 	void createCommandBuffers(); // Function to create command buffers themselves.
 	void createSyncObjects();
+	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
 	void runRenderer(); // The main loop - draw basically.
 	void drawFrame(); // function to acquire and draw a frame.
@@ -143,6 +156,7 @@ private:
 
 	bool checkValidationLayerSupport(); // check for validation layers.
 	std::vector<const char*> getRequiredExtensions(); // get the extensions from GLFW
+	bool frameBufferResized = false;
 
 	// member vars
 	GLFWwindow* mWindow; // The window that we see.
@@ -165,6 +179,11 @@ private:
 	std::vector<VkFramebuffer> mSwapChainFrameBuffers; // storage of frame buffers
 	VkCommandPool mCommandPool; // pool for command buffers
 	std::vector<VkCommandBuffer> mCommandBuffers; // list of command buffers
+	VkBuffer mVertexBuffer; // the vertex buffer
+	VkMemoryRequirements mMemRequirements; // buffers have memory requirements.
+	VkDeviceMemory mVertexBufferDeviceMemory; // put down buffers in the memory of the device.
+	VkBuffer mIndexBuffer; // buffer for indices of vertices
+	VkDeviceMemory mIndexBufferMemory; // memory for above buffer
 
 	// sync objects here
 	std::vector<VkSemaphore> mImageAvailableSemaphores; // Semaphores keep our async execution in line
@@ -172,6 +191,7 @@ private:
 	std::vector<VkFence> mInFlightFences; // Ensure CPU-GPU synchro
 	std::vector<VkFence> mImagesInFlight; // Lets us know if an image is currently being drawn to
 	size_t mCurrentFrame = 0;
+
 
 	// static and other members down here.
 	// we add macros to make sure vulkan can call this and we have to like "register" it.
@@ -204,6 +224,13 @@ private:
 		file.close();
 
 		return buffer;
+	}
+
+	static void framebufferResizeCallback(GLFWwindow* window, int width, int height) 
+	{
+		auto app = reinterpret_cast<VulkanRenderer*>(glfwGetWindowUserPointer(window));
+		app->frameBufferResized = true;
+
 	}
 };
 

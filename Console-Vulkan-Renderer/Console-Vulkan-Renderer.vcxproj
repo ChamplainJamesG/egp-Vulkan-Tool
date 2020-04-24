@@ -90,12 +90,12 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.1.130.0\Include;C:\Users\james.griffiths01\Desktop\ConsoleProg\Console-Vulkan-Renderer\Libraries\glm;C:\Users\james.griffiths01\Desktop\ConsoleProg\Console-Vulkan-Renderer\Libraries\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.1.130.0\Include;C:\Users\user\Desktop\Jimmy Console\egp-Vulkan-Tool\Libraries\glm;C:\Users\user\Desktop\Jimmy Console\egp-Vulkan-Tool\Libraries\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.1.130.0\Lib;C:\Users\james.griffiths01\Desktop\ConsoleProg\Console-Vulkan-Renderer\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.1.130.0\Lib;C:\Users\user\Desktop\Jimmy Console\egp-Vulkan-Tool\Libraries\glfw-3.3.2.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
