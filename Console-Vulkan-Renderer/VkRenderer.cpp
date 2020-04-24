@@ -911,11 +911,11 @@ void VulkanRenderer::createCommandBuffers()
 		VkBuffer vertexBuffers[] = { mVertexBuffer };
 		VkDeviceSize offsets[] = { 0 };
 		vkCmdBindVertexBuffers(mCommandBuffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(mCommandBuffers[i], mIndexBuffer, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindIndexBuffer(mCommandBuffers[i], mIndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 		//vkCmdDraw(mCommandBuffers[i], 3, 1, 0, 0);
-		//vkCmdDrawIndexed(mCommandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 		vkCmdDrawIndexed(mCommandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+		//vkCmdDrawIndexed(mCommandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 		// stop recording
 		vkCmdEndRenderPass(mCommandBuffers[i]);
 		if (vkEndCommandBuffer(mCommandBuffers[i]) != VK_SUCCESS) {
