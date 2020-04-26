@@ -5,6 +5,8 @@
 #define GLFW_INCLUDE_VULKAN
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
+#include <glm/gtc/matrix_transform.hpp>
+#include <chrono>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "glm/vec4.hpp"
@@ -73,6 +75,13 @@ const std::vector<uint32_t> indices =
 	0, 1, 2, 2, 3, 0
 };
 
+struct UniformBufferObject
+{
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
+};
+
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
@@ -137,6 +146,7 @@ private:
 	void cleanupSwapChain();
 	void recreateSwapChain();
 	// end ^^^
+	void createDescriptorSetLayout();
 	void createRenderPass(); // create a render pass for graphics pipeline to use.
 	void createGraphicsPipeline(); // we have to make our own graphics pipeline. 
 	VkShaderModule createShaderModule(const std::vector<char>& code); // helper to create shader modules for vulkan from the shader code.
@@ -144,7 +154,10 @@ private:
 	void createCommandPool(); // Create pool for command buffers
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory); // helper function to create buffers
 	void createVertexBuffer(); // Create vertex buffer
-	void createIndexBuffer();
+	void createIndexBuffer(); // create index buffers
+	void createUniformBuffers(); // create uniform buffers
+	void createDescriptorPool(); // create pool for uniforms
+	void createDescriptorSet(); // create descriptor set for uniforms.
 	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size); // copy a buffer into another one.
 	void createCommandBuffers(); // Function to create command buffers themselves.
 	void createSyncObjects();
@@ -152,6 +165,7 @@ private:
 
 	void runRenderer(); // The main loop - draw basically.
 	void drawFrame(); // function to acquire and draw a frame.
+	void updateUniformBuffer(uint32_t curImage); // update uniform buffer
 	void cleanRenderer(); // Cleanup everything on destroy.
 
 	bool checkValidationLayerSupport(); // check for validation layers.
@@ -173,6 +187,7 @@ private:
 	VkFormat mSwapChainImageFormat; // used to store the swap chain image format for later (i.e recreation of swapchain)
 	VkExtent2D mSwapChainExtent; // same as above.
 	std::vector<VkImageView> mSwapChainImageViews; // how we can access an image.
+	VkDescriptorSetLayout mDescriptorSetLayout; // descriptor set for UBO
 	VkPipelineLayout mPipelineLayout; // the vulkan graphics pipeline.
 	VkRenderPass mRenderPass; // render pass storage
 	VkPipeline mGraphicsPipeline; // Stores the graphics pipeline & all stages.
@@ -184,6 +199,10 @@ private:
 	VkDeviceMemory mVertexBufferDeviceMemory; // put down buffers in the memory of the device.
 	VkBuffer mIndexBuffer; // buffer for indices of vertices
 	VkDeviceMemory mIndexBufferMemory; // memory for above buffer
+	std::vector<VkBuffer> uniformBuffers; // uniform buffers
+	std::vector<VkDeviceMemory> uniformBuffersMemory; // uniform buffer memory
+	VkDescriptorPool mDescriptorPool; // descriptor pool.
+	std::vector<VkDescriptorSet> mDescriptorSets; // descriptor sets.
 
 	// sync objects here
 	std::vector<VkSemaphore> mImageAvailableSemaphores; // Semaphores keep our async execution in line
