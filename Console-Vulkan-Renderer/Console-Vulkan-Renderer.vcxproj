@@ -90,7 +90,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.1.130.0\Include;C:\Users\user\Desktop\Jimmy Console\egp-Vulkan-Tool\Libraries\glm;C:\Users\user\Desktop\Jimmy Console\egp-Vulkan-Tool\Libraries\glfw-3.3.2.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.1.130.0\Include;C:\Users\user\Desktop\Jimmy Console\egp-Vulkan-Tool\Libraries\glm;C:\Users\user\Desktop\Jimmy Console\egp-Vulkan-Tool\Libraries\glfw-3.3.2.bin.WIN64\include;C:\Users\user\Desktop\Jimmy Console\egp-Vulkan-Tool\Libraries\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>

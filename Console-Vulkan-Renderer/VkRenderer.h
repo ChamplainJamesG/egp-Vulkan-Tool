@@ -163,6 +163,14 @@ private:
 	void createSyncObjects();
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
+	void createTextureImage();
+	void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
+		VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer cmdBuffer);
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
 	void runRenderer(); // The main loop - draw basically.
 	void drawFrame(); // function to acquire and draw a frame.
 	void updateUniformBuffer(uint32_t curImage); // update uniform buffer
@@ -203,6 +211,8 @@ private:
 	std::vector<VkDeviceMemory> uniformBuffersMemory; // uniform buffer memory
 	VkDescriptorPool mDescriptorPool; // descriptor pool.
 	std::vector<VkDescriptorSet> mDescriptorSets; // descriptor sets.
+	VkImage mTextureImage; // texture image
+	VkDeviceMemory mTextureImageMemory; // memory image memory
 
 	// sync objects here
 	std::vector<VkSemaphore> mImageAvailableSemaphores; // Semaphores keep our async execution in line
