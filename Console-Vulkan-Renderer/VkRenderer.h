@@ -35,6 +35,7 @@ struct Vertex
 {
 	glm::vec2 mPos;
 	glm::vec3 mColor;
+	glm::vec2 mTexCoord;
 
 	static VkVertexInputBindingDescription getBindingDescription()
 	{
@@ -46,17 +47,23 @@ struct Vertex
 		return bindingDesc;
 	}
 
-	static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() 
+	static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() 
 	{
-		std::array<VkVertexInputAttributeDescription, 2> attributeDescs = {};
+		std::array<VkVertexInputAttributeDescription, 3> attributeDescs = {};
 		attributeDescs[0].binding = 0;
 		attributeDescs[0].location = 0;
 		attributeDescs[0].format = VK_FORMAT_R32G32_SFLOAT;
 		attributeDescs[0].offset = offsetof(Vertex, mPos);
+
 		attributeDescs[1].binding = 0;
 		attributeDescs[1].location = 1;
 		attributeDescs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attributeDescs[1].offset = offsetof(Vertex, mColor);
+
+		attributeDescs[2].binding = 0;
+		attributeDescs[2].location = 2;
+		attributeDescs[2].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescs[2].offset = offsetof(Vertex, mTexCoord);
 
 		return attributeDescs;
 	}
@@ -64,10 +71,10 @@ struct Vertex
 };
 
 const std::vector<Vertex> vertices = {
-	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
 };
 
 const std::vector<uint32_t> indices =
@@ -170,6 +177,9 @@ private:
 	void endSingleTimeCommands(VkCommandBuffer cmdBuffer);
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+	void createTextureImageView(); // create an image view, ino a texture
+	VkImageView createImageView(VkImage image, VkFormat format);
+	void createTextureSampler();
 
 	void runRenderer(); // The main loop - draw basically.
 	void drawFrame(); // function to acquire and draw a frame.
@@ -213,6 +223,8 @@ private:
 	std::vector<VkDescriptorSet> mDescriptorSets; // descriptor sets.
 	VkImage mTextureImage; // texture image
 	VkDeviceMemory mTextureImageMemory; // memory image memory
+	VkImageView mTextureimageView; // image view into the main texture
+	VkSampler mTextureSampler; // Sampler for the texture for shader
 
 	// sync objects here
 	std::vector<VkSemaphore> mImageAvailableSemaphores; // Semaphores keep our async execution in line
