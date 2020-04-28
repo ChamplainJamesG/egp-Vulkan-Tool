@@ -16,6 +16,7 @@ layout(location = 3) in vec3 inNormal;
 layout(location = 0) out vec3 fragColor;
 layout(location = 1) out vec2 fragTexCoord;
 layout(location = 2) out vec3 vNormal;
+layout(location = 3) out vec3 vPosition;
 
 void main()
 {
@@ -23,7 +24,10 @@ void main()
 	fragColor = inColor;
 	fragTexCoord = inTexCoord;
 
+	vec4 clipSpace = ubo.view * ubo.model * vec4(inPosition, 1.0);
+
 	vec3 normalizedNormal = mat3(ubo.view) * mat3(ubo.model) * inNormal;
 	normalizedNormal /= length(normalizedNormal);
 	vNormal = normalizedNormal;
+	vPosition = vec3(clipSpace.x, clipSpace.y, clipSpace.z);
 }
