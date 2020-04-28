@@ -20,6 +20,9 @@
 #include <array>
 const int WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 
+const std::string MODEL = "Models/utah_teapot.obj";
+const std::string TEXTURE = "Textures/Dan.jpg";
+
 const std::vector<const char*> VALIDATION_LAYERS = 
 {
 	"VK_LAYER_KHRONOS_validation"
@@ -33,9 +36,10 @@ const std::vector<const char*> DEVICE_EXTENSIONS =
 // structure to hold vertex data (2d rn)
 struct Vertex
 {
-	glm::vec2 mPos;
+	glm::vec3 mPos;
 	glm::vec3 mColor;
 	glm::vec2 mTexCoord;
+	glm::vec3 mNormal;
 
 	static VkVertexInputBindingDescription getBindingDescription()
 	{
@@ -52,7 +56,7 @@ struct Vertex
 		std::array<VkVertexInputAttributeDescription, 3> attributeDescs = {};
 		attributeDescs[0].binding = 0;
 		attributeDescs[0].location = 0;
-		attributeDescs[0].format = VK_FORMAT_R32G32_SFLOAT;
+		attributeDescs[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 		attributeDescs[0].offset = offsetof(Vertex, mPos);
 
 		attributeDescs[1].binding = 0;
@@ -65,22 +69,36 @@ struct Vertex
 		attributeDescs[2].format = VK_FORMAT_R32G32_SFLOAT;
 		attributeDescs[2].offset = offsetof(Vertex, mTexCoord);
 
+		attributeDescs[3].binding = 0;
+		attributeDescs[3].location = 3;
+		attributeDescs[3].format = VK_FORMAT_R32G32B32_SFLOAT;
+		attributeDescs[3].offset = offsetof(Vertex, mNormal);
+
+
 		return attributeDescs;
 	}
 
 };
 
-const std::vector<Vertex> vertices = {
-	{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-	{{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-	{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-	{{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<uint32_t> indices =
-{
-	0, 1, 2, 2, 3, 0
-};
+//const std::vector<Vertex> vertices = {
+//	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+//	{{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+//	{{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+//	{{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
+//
+//	{ {-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+//	{{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+//	{{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+//	{{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+//
+//};
+//
+//const std::vector<uint32_t> indices =
+//{
+//	0, 1, 2, 2, 3, 0,
+//	4, 5, 6, 6, 7, 4
+//
+//};
 
 struct UniformBufferObject
 {
@@ -178,8 +196,15 @@ private:
 	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	void createTextureImageView(); // create an image view, ino a texture
-	VkImageView createImageView(VkImage image, VkFormat format);
+	VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
 	void createTextureSampler();
+
+	void createDepthResources(); // create resources for depth buffer
+	VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features); // help find supported formats for depth buffer
+	VkFormat findDepthFormat(); // help find depth format for buffer
+	bool hasStencilCompoonent(VkFormat format);
+
+	void loadModel(); // load the model.
 
 	void runRenderer(); // The main loop - draw basically.
 	void drawFrame(); // function to acquire and draw a frame.
@@ -225,6 +250,14 @@ private:
 	VkDeviceMemory mTextureImageMemory; // memory image memory
 	VkImageView mTextureimageView; // image view into the main texture
 	VkSampler mTextureSampler; // Sampler for the texture for shader
+
+	VkImage mDepthImage;
+	VkDeviceMemory mDepthImageMemory;
+	VkImageView mDepthImageView;
+
+	// model loading
+	std::vector<Vertex> mVertices;
+	std::vector<uint32_t> mIndices;
 
 	// sync objects here
 	std::vector<VkSemaphore> mImageAvailableSemaphores; // Semaphores keep our async execution in line
